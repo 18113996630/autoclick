@@ -48,12 +48,13 @@ public class DriverUtil {
 			//刷新成功确认
 			WebElement exit = findByCssSelector("#layerbox-border > div > div.layerbox-foot > a");
 			exit.click();
-			ConnectionUtil.log(1, "刷新成功");
+			ConnectionUtil.log(null, 1, "刷新成功");
 		} catch (Exception e) {
 			if (e.getMessage().contains("#layerbox-border")) {
-				ConnectionUtil.log(1, "检测到当日刷新已完成");
+				ConnectionUtil.log(null, 1, "检测到当日刷新已完成");
+				return false;
 			}
-			ConnectionUtil.log(0, e.getMessage());
+			ConnectionUtil.log(null, 0, e.getMessage());
 		}
 		return false;
 	}
@@ -66,8 +67,7 @@ public class DriverUtil {
 			} catch (Exception e) {
 				//弹窗会导致exception
 				if (!e.getMessage().contains("alert")) {
-					ConnectionUtil.log(0, "检测到浏览器已关闭，即将退出程序");
-					ConnectionUtil.close();
+					ConnectionUtil.log(null, 0, "检测到浏览器已关闭，即将退出程序");
 					System.exit(1);
 				}
 			}
@@ -79,14 +79,14 @@ public class DriverUtil {
 			driver.switchTo().alert();
 		} catch (Exception e) {
 			try {
-				ConnectionUtil.log(1, "登录成功");
+				ConnectionUtil.log(null, 1, "登录成功");
 				return;
 				//防止服务器失效
 			} catch (Exception e1) {
 				return;
 			}
 		}
-		ConnectionUtil.log(0, "登录失败，密码错误");
+		ConnectionUtil.log(null, 0, "登录失败，密码错误");
 		System.exit(0);
 	}
 
@@ -123,7 +123,7 @@ public class DriverUtil {
 			cancel.click();
 		} catch (Exception e) {
 			if (e.getMessage().contains("#layerbox-border")) {
-				ConnectionUtil.log(1, "检测到当日刷新已完成:" + sdfDay.format(new Date()));
+				ConnectionUtil.log(null, 1, "检测到当日刷新已完成:" + sdfDay.format(new Date()));
 				return true;
 			}
 		}

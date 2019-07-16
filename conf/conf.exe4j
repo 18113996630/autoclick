@@ -18,10 +18,7 @@
   </splashScreen>
   <java mainClass="com.hrong.click.AutoClick" vmParameters="" arguments="" allowVMPassthroughParameters="true" preferredVM="client" bundleRuntime="true" minVersion="1.7" maxVersion="1.8" allowBetaVM="false" jdkOnly="false">
     <searchSequence>
-      <registry />
-      <envVar name="JAVA_HOME" />
-      <envVar name="JDK_HOME" />
-      <directory location="./env/jre1.8.0_144" />
+      <directory location="../env/jre1.8.0_144" />
     </searchSequence>
     <classPath>
       <archive location="E:/workspace/autoclick/out/artifacts/autoclick_jar/autoclick.jar" failOnError="false" />

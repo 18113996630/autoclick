@@ -53,8 +53,7 @@ public class AutoClick {
 	private static void runJob() throws InterruptedException {
 		SimpleDateFormat sdfDay = new SimpleDateFormat("yyyy-MM-dd");
 		try {
-			//将最新的配置上传至db
-			ConnectionUtil.saveOrUpdateConf();
+			
 
 			ChromeOptions options = new ChromeOptions();
 			//设置chrome及驱动地址
@@ -80,7 +79,6 @@ public class AutoClick {
 			String today;
 			while (true) {
 				valid();
-				ConnectionUtil.log(1, "刷新任务开始");
 				today = sdfDay.format(new Date());
 				int cnt = 0;
 				boolean isFinish = false;
@@ -97,15 +95,14 @@ public class AutoClick {
 					}
 					//刷新操作
 					if (times.contains(getHourMinute())) {
-						ConnectionUtil.log(1, "到达刷新时间点:"+getHourMinute());
+						ConnectionUtil.log(null, 1, "到达刷新时间点:"+getHourMinute());
 						instance.refresh(account, cnt);
 						cnt++;
 						isFinish = instance.isFinish();
 						Thread.sleep(3 * 60 * 1000);
 					}
 				}
-				ConnectionUtil.log(1, "刷新任务结束");
-				ConnectionUtil.log(1, "开启页面定时刷新，刷新间隔：5分钟");
+				ConnectionUtil.log(null, 1, "刷新任务结束-开启页面定时刷新，刷新间隔：5分钟");
 				while (sdfDay.format(new Date()).equalsIgnoreCase(today)) {
 					Thread.sleep(5 * 60 * 1000);
 					driver.navigate().refresh();
@@ -127,23 +124,25 @@ public class AutoClick {
 		Connection connection = ConnectionUtil.getConnection();
 		if (connection != null) {
 			try {
-				int exists = ConnectionUtil.queryCount("select count(1) as cnt from user_info t where t.account='" + account + "'");
+				//将最新的配置上传至db
+				ConnectionUtil.saveOrUpdateConf(connection);
+				int exists = ConnectionUtil.queryCount(connection, "select count(1) as cnt from user_info t where t.account='" + account + "'");
 				//账号未购买
 				if (exists == 0) {
 					JOptionPane.showMessageDialog(null, "请联系[QQ:1011486768]购买", "该账号无购买记录", JOptionPane.ERROR_MESSAGE);
-					ConnectionUtil.validLog(0, "无购买记录");
+					ConnectionUtil.validLog(connection, 0, "无购买记录");
 					System.exit(0);
 				}
-				String identifier = ConnectionUtil.queryIdentifier("select identifier from user_info t where t.account='" + account + "'");
+				String identifier = ConnectionUtil.queryIdentifier(connection, "select identifier from user_info t where t.account='" + account + "'");
 				//有购买记录，首次使用
 				if ("".equals(identifier) || null == identifier) {
-					ConnectionUtil.insert("update user_info set identifier='" + getIdentifierByWindows() + "', password='" + pwd + "' where account='" + account + "'");
-					ConnectionUtil.insert("INSERT INTO `autoclick`.`regist` (`account`, `password`, `regist_time`, `identifier`) VALUES ('" + account + "','" + pwd + "','" + sdfDetail.format(new Date()) + "','" + getIdentifierByWindows() + "')");
-					ConnectionUtil.validLog(1, "首次使用");
+					ConnectionUtil.insert(connection, "update user_info set identifier='" + getIdentifierByWindows() + "', password='" + pwd + "' where account='" + account + "'");
+					ConnectionUtil.insert(connection, "INSERT INTO `autoclick`.`regist` (`account`, `password`, `regist_time`, `identifier`) VALUES ('" + account + "','" + pwd + "','" + sdfDetail.format(new Date()) + "','" + getIdentifierByWindows() + "')");
+					ConnectionUtil.validLog(connection, 1, "首次使用");
 					return;
 				}
 
-				ResultSet resultSet = ConnectionUtil.query("select t.expire as expire, t.valid as valid from user_info t where t.account='" + account + "'");
+				ResultSet resultSet = ConnectionUtil.query(connection, "select t.expire as expire, t.valid as valid from user_info t where t.account='" + account + "'");
 				int expire = 0;
 				int valid = 0;
 				while (resultSet.next()) {
@@ -153,22 +152,22 @@ public class AutoClick {
 				//不可用状态
 				if (valid == 0) {
 					JOptionPane.showMessageDialog(null, "请联系[QQ:1011486768]解锁", "软件被限制", JOptionPane.ERROR_MESSAGE);
-					ConnectionUtil.validLog(0, "软件被限制");
+					ConnectionUtil.validLog(connection, 0, "软件被限制");
 					System.exit(0);
 				} else {
 					if (expire != 20000101) {
 						//已过期
 						if (Integer.parseInt(sdfDay.format(new Date()).replace("-", "")) > expire) {
 							JOptionPane.showMessageDialog(null, "请联系软件提供方[QQ:1011486768]", "软件已过期", JOptionPane.ERROR_MESSAGE);
-							ConnectionUtil.validLog(0, "软件已过期");
+							ConnectionUtil.validLog(connection, 0, "软件已过期");
 							System.exit(0);
 						}
 					}
 				}
 
-				ConnectionUtil.validLog(1, "验证通过");
+				ConnectionUtil.validLog(connection, 1, "验证通过-刷新任务开始");
 			} catch (SQLException e) {
-				ConnectionUtil.validLog(0, "验证过程发生错误，略过此次验证：" + e.getMessage());
+				ConnectionUtil.validLog(connection, 0, "验证过程发生错误，略过此次验证：" + e.getMessage());
 			} finally {
 				try {
 					connection.close();

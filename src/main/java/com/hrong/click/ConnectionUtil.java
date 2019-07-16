@@ -14,17 +14,18 @@ import java.util.logging.Logger;
  **/
 public class ConnectionUtil {
 
-	private static Connection connection = getConnection();
+//	private static Connection connection = getConnection();
 	private static Logger logger = Logger.getLogger("ConnectionUtil");
 
 
-	public static void saveOrUpdateConf() {
+	public static void saveOrUpdateConf(Connection connection) {
+		
 		String times = PropertyUtil.get("times").trim();
 		String account = PropertyUtil.get("account").trim();
 		logger.info(times);
 		PreparedStatement statement = null;
 		try {
-			int id = queryCount("select id as cnt from conf t where t.account='" + account + "';");
+			int id = queryCount(connection,"select id as cnt from conf t where t.account='" + account + "';");
 			if (id == 0) {
 				statement = connection.prepareStatement("INSERT INTO `autoclick`.`conf` (`account`, `times`) VALUES (?, ?);");
 				statement.setString(1, PropertyUtil.get("account"));
@@ -38,11 +39,16 @@ public class ConnectionUtil {
 		}
 	}
 
-	public static void log(int success, String msg) {
+	public static void log(Connection connection, int success, String msg) {
 		logger.info(msg);
 		SimpleDateFormat sdfDetail = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		PreparedStatement statement = null;
+		boolean useOnce = false;
 		try {
+			if(connection == null){
+				connection = getConnection();
+				useOnce = true;
+			}
 			statement = connection.prepareStatement("INSERT INTO `autoclick`.`logs` (`account`, `time`, `success`, `msg`) VALUES (?, ?, ?, ?);");
 			statement.setString(1, PropertyUtil.get("account"));
 			statement.setString(2, sdfDetail.format(new Date()));
@@ -51,10 +57,14 @@ public class ConnectionUtil {
 			statement.executeUpdate();
 		} catch (Exception e) {
 			return;
+		} finally {
+			if(useOnce){
+				close(connection);
+			}
 		}
 	}
 
-	public static void validLog(int success, String msg) {
+	public static void validLog(Connection connection, int success, String msg) {
 		logger.info(msg);
 		SimpleDateFormat sdfDetail = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		PreparedStatement statement = null;
@@ -70,7 +80,7 @@ public class ConnectionUtil {
 		}
 	}
 
-	public static void insert(String sql) {
+	public static void insert(Connection connection, String sql) {
 		try {
 			PreparedStatement statement = connection.prepareStatement(sql);
 			statement.executeUpdate();
@@ -79,7 +89,7 @@ public class ConnectionUtil {
 		}
 	}
 
-	public static String queryIdentifier(String sql) {
+	public static String queryIdentifier(Connection connection, String sql) {
 		String identifier = null;
 		try {
 			PreparedStatement statement = connection.prepareStatement(sql);
@@ -93,7 +103,7 @@ public class ConnectionUtil {
 		return identifier;
 	}
 
-	public static int queryCount(String sql) {
+	public static int queryCount(Connection connection, String sql) {
 		int cnt = 0;
 		try {
 			PreparedStatement statement = connection.prepareStatement(sql);
@@ -107,7 +117,7 @@ public class ConnectionUtil {
 		return cnt;
 	}
 
-	public static ResultSet query(String sql) {
+	public static ResultSet query(Connection connection, String sql) {
 		try {
 			PreparedStatement statement = connection.prepareStatement(sql);
 			return statement.executeQuery();
@@ -130,7 +140,7 @@ public class ConnectionUtil {
 		return connection;
 	}
 
-	public static void close() {
+	public static void close(Connection connection) {
 		if (connection != null) {
 			try {
 				connection.close();
