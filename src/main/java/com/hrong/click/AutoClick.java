@@ -38,8 +38,8 @@ import java.util.logging.Logger;
  **/
 public class AutoClick {
 	private static Logger logger = Logger.getLogger("AutoClick");
-	private static String account = "yinkang";
-	private static String pwd = "xbit2018QCKJ";
+	private static String account = "";
+	private static String pwd = "";
 	private static SimpleDateFormat sdfDetail = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	private static SimpleDateFormat sdfDay = new SimpleDateFormat("yyyy-MM-dd");
 	private static int max = 8;
@@ -331,7 +331,7 @@ public class AutoClick {
 		Connection connection = null;
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
-			connection = DriverManager.getConnection("jdbc:mysql://39.106.190.74:3306/autoclick", "root", "4a3fa2de78");
+			connection = DriverManager.getConnection("jdbc:mysql://xx.xxx.xxx.xx:3306/autoclick", "root", "");
 		} catch (Exception e) {
 
 		}
