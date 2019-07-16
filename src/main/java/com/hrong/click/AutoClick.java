@@ -25,11 +25,8 @@ import java.util.logging.Logger;
  * @Author hrong
  **/
 public class AutoClick {
-	private static Logger logger = Logger.getLogger("AutoClick");
 	private static String account = "";
 	private static String pwd = "";
-	private static SimpleDateFormat sdfDetail = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-	private static SimpleDateFormat sdfDay = new SimpleDateFormat("yyyy-MM-dd");
 	private static List<String> times;
 	private static ThreadPoolExecutor executor = new ThreadPoolExecutor(3,
 			5,
@@ -182,15 +179,6 @@ public class AutoClick {
 		}
 	}
 
-	private static ResultSet query(Connection connection, String sql) {
-		try {
-			PreparedStatement statement = connection.prepareStatement(sql);
-			return statement.executeQuery();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
 
 
 	/**
