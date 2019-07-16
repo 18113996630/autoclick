@@ -8,6 +8,7 @@ import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
@@ -25,8 +26,10 @@ import java.util.logging.Logger;
  **/
 public class AutoClick {
 	private static Logger logger = Logger.getLogger("AutoClick");
-	private static String account = "yinkang";
-	private static String pwd = "xbit2018QCKJ";
+	private static String account = "";
+	private static String pwd = "";
+	private static SimpleDateFormat sdfDetail = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	private static SimpleDateFormat sdfDay = new SimpleDateFormat("yyyy-MM-dd");
 	private static List<String> times;
 	private static ThreadPoolExecutor executor = new ThreadPoolExecutor(3,
 			5,
@@ -177,6 +180,16 @@ public class AutoClick {
 				}
 			}
 		}
+	}
+
+	private static ResultSet query(Connection connection, String sql) {
+		try {
+			PreparedStatement statement = connection.prepareStatement(sql);
+			return statement.executeQuery();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 
