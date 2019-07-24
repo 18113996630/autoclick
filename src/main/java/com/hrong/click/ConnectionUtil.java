@@ -39,6 +39,31 @@ public class ConnectionUtil {
 		}
 	}
 
+	public static void main(String[] args) {
+		boolean refreshTime = validRefreshTime(null, 1, "测试测试测试");
+		System.out.println(refreshTime);
+	}
+
+	public static boolean validRefreshTime(Connection connection, int success, String msg) {
+		SimpleDateFormat sdfDay = new SimpleDateFormat("yyyy-MM-dd");
+		if(connection == null){
+			connection = getConnection();
+		}
+		try {
+			int max = queryCount(connection, "select max as cnt from `autoclick`.`user_info` t where t.account='" + PropertyUtil.get("account") + "'");
+			int cnt = queryCount(connection, "SELECT count( 1 ) AS cnt FROM `autoclick`.`logs` t WHERE t.account = '"+PropertyUtil.get("account")+"' AND LEFT (time, 10) = '"+sdfDay.format(new Date())+"' AND t.msg = '刷新成功'");
+			log(connection, success, msg);
+			if (cnt >= max) {
+				log(connection, 999, "已到达最大刷新次数");
+				return false;
+			}
+			return true;
+		} catch (Exception e) {
+			return true;
+		}
+	}
+
+
 	public static void log(Connection connection, int success, String msg) {
 		logger.info(msg);
 		SimpleDateFormat sdfDetail = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

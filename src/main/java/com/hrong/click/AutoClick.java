@@ -8,7 +8,6 @@ import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
@@ -17,6 +16,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -25,93 +25,123 @@ import java.util.logging.Logger;
  * @Author hrong
  **/
 public class AutoClick {
+	public static int errorCount = 0;
+	private static Logger logger = Logger.getLogger("AutoClick");
 	private static String account = "";
 	private static String pwd = "";
 	private static List<String> times;
-	private static ThreadPoolExecutor executor = new ThreadPoolExecutor(3,
-			5,
+	private static ThreadPoolExecutor executor = new ThreadPoolExecutor(1,
+			3,
 			0L,
-			TimeUnit.SECONDS, new LinkedBlockingQueue<>(10), r -> new Thread(r, "thread-%d"));
-	/**
-	 * 最大刷新次数
-	 */
-	private static int max;
+			TimeUnit.SECONDS, new LinkedBlockingQueue<>(10), (ThreadFactory) Thread::new);
+	private static ChromeDriver driver;
+	private static DriverUtil instance = null;
 
 	static {
-		account = PropertyUtil.get("account") == null ? account : PropertyUtil.get("account");
-		pwd = PropertyUtil.get("password") == null ? pwd : PropertyUtil.get("password");
+		account = PropertyUtil.get("account") == null ? account : PropertyUtil.get("account").trim();
+		pwd = PropertyUtil.get("password") == null ? pwd : PropertyUtil.get("password").trim();
 		times = Arrays.asList(PropertyUtil.get("times").trim().split("\\W+"));
 		Collections.sort(times);
-		max = times.size();
 	}
 
 
-	public static void main(String[] args) throws InterruptedException {
-		runJob();
-	}
-
-	private static void runJob() throws InterruptedException {
-		SimpleDateFormat sdfDay = new SimpleDateFormat("yyyy-MM-dd");
+	public static void main(String[] args) throws Exception {
 		try {
-			
-
-			ChromeOptions options = new ChromeOptions();
-			//设置chrome及驱动地址
-			options.setBinary("D:\\chrome\\Application\\chrome.exe");
-			System.setProperty("webdriver.chrome.driver", "D:\\chrome\\Application\\chromedriver.exe");
-			ChromeDriver driver = new ChromeDriver(options);
-
-			DriverUtil instance = DriverUtil.getInstance(driver);
+			logger.info("账号"+account+"首次运行>>>>");
 			//检测浏览器是否关闭
-			executor.execute(instance::validChromeIsClosed);
-
-			driver.get("http://dealer.zol.com.cn");
-			Thread.sleep(2000L);
-
-			WebElement userName = instance.findById("loginUsername");
-			WebElement password = instance.findById("loginPassword");
-			WebElement btn = instance.findByCssSelector("#merchantLogin > div > input");
-			userName.sendKeys(account);
-			password.sendKeys(pwd);
-			btn.click();
-			Thread.sleep(1000L);
-			instance.validPwd();
-			String today;
-			while (true) {
-				valid();
-				today = sdfDay.format(new Date());
-				int cnt = 0;
-				boolean isFinish = false;
-				while (true) {
-					//当天刷新任务是否完成
-					if (isFinish) {
-						break;
-					}
-					//当前时间与刷新时间点间隔小于5分钟时，不允许刷新
-					if (canRefresh()) {
-						Thread.sleep(2 * 60 * 1000);
-						driver.navigate().refresh();
-						instance.closeLayer();
-					}
-					//刷新操作
-					if (times.contains(getHourMinute())) {
-						ConnectionUtil.log(null, 1, "到达刷新时间点:"+getHourMinute());
-						instance.refresh(account, cnt);
-						cnt++;
-						isFinish = instance.isFinish();
-						Thread.sleep(3 * 60 * 1000);
+			executor.execute(() -> {
+				while (errorCount != 1) {
+					try {
+						Thread.sleep(3000L);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
 					}
 				}
-				ConnectionUtil.log(null, 1, "刷新任务结束-开启页面定时刷新，刷新间隔：5分钟");
-				while (sdfDay.format(new Date()).equalsIgnoreCase(today)) {
-					Thread.sleep(5 * 60 * 1000);
+				logger.info("开始监听浏览器是否关闭");
+				instance.validChromeIsClosed();
+			});
+			runJob();
+		} catch (Exception e) {
+			driver.close();
+			logger.info("出现异常:"+e.getMessage()+",开始第一次重试");
+			try {
+				runJob();
+			} catch (Exception e1) {
+				driver.close();
+				logger.info("第一次重试后运行过程中出现异常:"+e1.getMessage()+",开始第二次重试");
+				try {
+					runJob();
+				} catch (Exception e2) {
+					logger.info("第二次重试后运行过程中出现异常:"+e1.getMessage()+",程序即将退出");
+					errorCount = 2;
+					driver.close();
+				}
+			}
+		}
+	}
+
+	private static void runJob() throws Exception {
+		ChromeOptions options = new ChromeOptions();
+		//设置chrome及驱动地址
+		options.setBinary("D:\\chrome\\Application\\chrome.exe");
+		System.setProperty("webdriver.chrome.driver", "D:\\chrome\\Application\\chromedriver.exe");
+		driver = new ChromeDriver(options);
+		deatilJob(driver);
+	}
+
+	private static void deatilJob(ChromeDriver driver) throws Exception {
+		SimpleDateFormat sdfDay = new SimpleDateFormat("yyyy-MM-dd");
+		instance = DriverUtil.getInstance(driver);
+		errorCount = 1;
+		//检测浏览器是否关闭
+		executor.execute(instance::validChromeIsClosed);
+
+		driver.get("http://dealer.zol.com.cn");
+		Thread.sleep(2000L);
+		WebElement userName = instance.findById("loginUsername");
+		WebElement password = instance.findById("loginPassword");
+		WebElement btn = instance.findByCssSelector("#merchantLogin > div > input");
+		userName.sendKeys(account);
+		password.sendKeys(pwd);
+		btn.click();
+		Thread.sleep(1000L);
+		instance.validPwd();
+		String today;
+		while (true) {
+			valid();
+			today = sdfDay.format(new Date());
+//				boolean isFirst = true;
+//				boolean isFinish = false;
+			while (true) {
+				//超过指定时间后启动，且未签到完成
+				if (similar("2350")) {
+					break;
+				}
+				//当前时间与刷新时间点间隔大于5分钟时，定时刷新
+				if (canRefresh()) {
+					Thread.sleep(3 * 60 * 1000);
 					driver.navigate().refresh();
 					instance.closeLayer();
 				}
+				//刷新操作
+				if (times.contains(getHourMinute())) {
+					boolean pass = ConnectionUtil.validRefreshTime(null, 1, "到达预定刷新时间点:" + getHourMinute());
+					if (!pass) {
+						break;
+					}
+					boolean isFinish = instance.isFinish();
+					if (isFinish) {
+						break;
+					}
+					Thread.sleep(3 * 60 * 1000);
+				}
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			JOptionPane.showMessageDialog(null, "请联系软件提供方[QQ:1011486768]", "出现问题", JOptionPane.ERROR_MESSAGE);
+			ConnectionUtil.log(null, 1, "刷新任务结束-开启页面定时刷新，刷新间隔：5分钟");
+			while (sdfDay.format(new Date()).equalsIgnoreCase(today)) {
+				Thread.sleep(5 * 60 * 1000);
+				driver.navigate().refresh();
+				instance.closeLayer();
+			}
 		}
 	}
 
@@ -119,65 +149,68 @@ public class AutoClick {
 	 * 验证软件是否过期
 	 */
 	private static void valid() {
-		SimpleDateFormat sdfDetail = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		SimpleDateFormat sdfDay = new SimpleDateFormat("yyyy-MM-dd");
-		Connection connection = ConnectionUtil.getConnection();
-		if (connection != null) {
-			try {
-				//将最新的配置上传至db
-				ConnectionUtil.saveOrUpdateConf(connection);
-				int exists = ConnectionUtil.queryCount(connection, "select count(1) as cnt from user_info t where t.account='" + account + "'");
-				//账号未购买
-				if (exists == 0) {
-					JOptionPane.showMessageDialog(null, "请联系[QQ:1011486768]购买", "该账号无购买记录", JOptionPane.ERROR_MESSAGE);
-					ConnectionUtil.validLog(connection, 0, "无购买记录");
-					System.exit(0);
-				}
-				String identifier = ConnectionUtil.queryIdentifier(connection, "select identifier from user_info t where t.account='" + account + "'");
-				//有购买记录，首次使用
-				if ("".equals(identifier) || null == identifier) {
-					ConnectionUtil.insert(connection, "update user_info set identifier='" + getIdentifierByWindows() + "', password='" + pwd + "' where account='" + account + "'");
-					ConnectionUtil.insert(connection, "INSERT INTO `autoclick`.`regist` (`account`, `password`, `regist_time`, `identifier`) VALUES ('" + account + "','" + pwd + "','" + sdfDetail.format(new Date()) + "','" + getIdentifierByWindows() + "')");
-					ConnectionUtil.validLog(connection, 1, "首次使用");
-					return;
-				}
+		try {
+			SimpleDateFormat sdfDetail = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			SimpleDateFormat sdfDay = new SimpleDateFormat("yyyy-MM-dd");
+			Connection connection = ConnectionUtil.getConnection();
+			if (connection != null) {
+				try {
+					//将最新的配置上传至db
+					ConnectionUtil.saveOrUpdateConf(connection);
+					int exists = ConnectionUtil.queryCount(connection, "select count(1) as cnt from user_info t where t.account='" + account + "'");
+					//账号未购买
+					if (exists == 0) {
+						JOptionPane.showMessageDialog(null, "请联系[QQ:1011486768]购买", "该账号无购买记录", JOptionPane.ERROR_MESSAGE);
+						ConnectionUtil.validLog(connection, 0, "无购买记录");
+						System.exit(0);
+					}
+					String identifier = ConnectionUtil.queryIdentifier(connection, "select identifier from user_info t where t.account='" + account + "'");
+					//有购买记录，首次使用
+					if ("".equals(identifier) || null == identifier) {
+						ConnectionUtil.insert(connection, "update user_info set identifier='" + getIdentifierByWindows() + "', password='" + pwd + "' where account='" + account + "'");
+						ConnectionUtil.insert(connection, "INSERT INTO `autoclick`.`regist` (`account`, `password`, `regist_time`, `identifier`) VALUES ('" + account + "','" + pwd + "','" + sdfDetail.format(new Date()) + "','" + getIdentifierByWindows() + "')");
+						ConnectionUtil.validLog(connection, 1, "首次使用");
+						return;
+					}
 
-				ResultSet resultSet = ConnectionUtil.query(connection, "select t.expire as expire, t.valid as valid from user_info t where t.account='" + account + "'");
-				int expire = 0;
-				int valid = 0;
-				while (resultSet.next()) {
-					expire = resultSet.getInt("expire");
-					valid = resultSet.getInt("valid");
-				}
-				//不可用状态
-				if (valid == 0) {
-					JOptionPane.showMessageDialog(null, "请联系[QQ:1011486768]解锁", "软件被限制", JOptionPane.ERROR_MESSAGE);
-					ConnectionUtil.validLog(connection, 0, "软件被限制");
-					System.exit(0);
-				} else {
-					if (expire != 20000101) {
-						//已过期
-						if (Integer.parseInt(sdfDay.format(new Date()).replace("-", "")) > expire) {
-							JOptionPane.showMessageDialog(null, "请联系软件提供方[QQ:1011486768]", "软件已过期", JOptionPane.ERROR_MESSAGE);
-							ConnectionUtil.validLog(connection, 0, "软件已过期");
-							System.exit(0);
+					ResultSet resultSet = ConnectionUtil.query(connection, "select t.expire as expire, t.valid as valid from user_info t where t.account='" + account + "'");
+					int expire = 0;
+					int valid = 0;
+					while (resultSet.next()) {
+						expire = resultSet.getInt("expire");
+						valid = resultSet.getInt("valid");
+					}
+					//不可用状态
+					if (valid == 0) {
+						JOptionPane.showMessageDialog(null, "请联系[QQ:1011486768]解锁", "软件被限制", JOptionPane.ERROR_MESSAGE);
+						ConnectionUtil.validLog(connection, 0, "软件被限制");
+						System.exit(0);
+					} else {
+						if (expire != 20000101) {
+							//已过期
+							if (Integer.parseInt(sdfDay.format(new Date()).replace("-", "")) > expire) {
+								JOptionPane.showMessageDialog(null, "请联系软件提供方[QQ:1011486768]", "软件已过期", JOptionPane.ERROR_MESSAGE);
+								ConnectionUtil.validLog(connection, 0, "软件已过期");
+								System.exit(0);
+							}
 						}
 					}
-				}
 
-				ConnectionUtil.validLog(connection, 1, "验证通过-刷新任务开始");
-			} catch (SQLException e) {
-				ConnectionUtil.validLog(connection, 0, "验证过程发生错误，略过此次验证：" + e.getMessage());
-			} finally {
-				try {
-					connection.close();
+					ConnectionUtil.validLog(connection, 1, "验证通过-刷新任务开始");
 				} catch (SQLException e) {
-					e.printStackTrace();
+					ConnectionUtil.validLog(connection, 0, "验证过程发生错误，略过此次验证：" + e.getMessage());
+				} finally {
+					try {
+						connection.close();
+					} catch (SQLException e) {
+						e.printStackTrace();
+					}
 				}
 			}
+		} catch (Exception e) {
+
 		}
 	}
-
 
 
 	/**
@@ -234,15 +267,10 @@ public class AutoClick {
 		return true;
 	}
 
-	private static boolean canRefreshOuter(boolean before, String time) {
+	private static boolean similar(String time) {
 		int now = getDateValue(getHourMinute());
 		int param = getDateValue(time);
-		//当前时间早于给定时间，给定时间-当前时间的差值大于4即可以刷新
-		if (before) {
-			return param - now >= 4;
-		}
-		//当前时间晚于给定时间，当前时间-给定时间的差值大于4即可以刷新
-		return now - param >= 4;
+		return Math.abs(now - param) <= 5;
 	}
 
 	private static int getDateValue(String value) {

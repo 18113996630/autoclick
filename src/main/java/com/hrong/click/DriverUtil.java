@@ -35,7 +35,7 @@ public class DriverUtil {
 		return driver.findElement(new By.ByCssSelector(selector));
 	}
 
-	public boolean refresh(String account, int cnt) {
+	public boolean refresh() {
 		closeLayer();
 		try {
 			//刷新按钮
@@ -67,8 +67,17 @@ public class DriverUtil {
 			} catch (Exception e) {
 				//弹窗会导致exception
 				if (!e.getMessage().contains("alert")) {
-					ConnectionUtil.log(null, 0, "检测到浏览器已关闭，即将退出程序");
-					System.exit(1);
+					try {
+						Thread.sleep(3000L);
+						if (AutoClick.errorCount > 1 || e.getMessage().contains("chrome not reachable") || e.getMessage().contains("no such window")) {
+							ConnectionUtil.log(null, 0, "检测到浏览器已关闭，即将退出程序");
+							System.exit(1);
+						}
+					} catch (InterruptedException e1) {
+						ConnectionUtil.log(null, 0, "检测到浏览器已关闭，即将退出程序");
+						System.exit(1);
+					}
+
 				}
 			}
 		}
