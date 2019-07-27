@@ -44,14 +44,14 @@ public class DriverUtil {
 			//确认刷新
 			WebElement sure = findByCssSelector("#layerbox-border > div > div.layerbox-foot > a.layerbox-button-true");
 			sure.click();
-			Thread.sleep(500);
+			Thread.sleep(1000);
 			//刷新成功确认
 			WebElement exit = findByCssSelector("#layerbox-border > div > div.layerbox-foot > a");
 			exit.click();
 			ConnectionUtil.log(null, 1, "刷新成功");
 		} catch (Exception e) {
 			if (e.getMessage().contains("#layerbox-border")) {
-				ConnectionUtil.log(null, 1, "检测到当日刷新已完成");
+				ConnectionUtil.log(null, 1, e.getMessage().substring(0,50));
 				return false;
 			}
 			ConnectionUtil.log(null, 0, e.getMessage());

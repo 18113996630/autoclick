@@ -134,7 +134,7 @@ public class AutoClick {
 					if (!pass) {
 						break;
 					}
-					boolean isFinish = instance.isFinish();
+					boolean isFinish = instance.refresh();
 					if (isFinish) {
 						break;
 					}
