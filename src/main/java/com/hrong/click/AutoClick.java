@@ -154,12 +154,10 @@ public class AutoClick {
 	 * 验证软件是否过期
 	 */
 	private static void valid() {
-		System.out.println("开始校验");
 		try {
 			SimpleDateFormat sdfDetail = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 			SimpleDateFormat sdfDay = new SimpleDateFormat("yyyy-MM-dd");
 			Connection connection = ConnectionUtil.getConnection();
-			System.out.println("连接是否为空："+connection==null);
 			if (connection != null) {
 				try {
 					//将最新的配置上传至db

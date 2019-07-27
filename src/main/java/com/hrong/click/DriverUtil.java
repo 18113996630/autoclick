@@ -68,7 +68,7 @@ public class DriverUtil {
 				//弹窗会导致exception
 				if (!e.getMessage().contains("alert")) {
 					try {
-						Thread.sleep(3000L);
+						Thread.sleep(1000L);
 						//没有发生超时的情况
 						if (!AutoClick.hasError) {
 							if (e.getMessage().contains("chrome not reachable") || e.getMessage().contains("no such window")) {
