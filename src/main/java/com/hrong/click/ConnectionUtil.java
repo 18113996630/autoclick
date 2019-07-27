@@ -90,7 +90,6 @@ public class ConnectionUtil {
 	}
 
 	public static void validLog(Connection connection, int success, String msg) {
-		logger.info(msg);
 		SimpleDateFormat sdfDetail = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		PreparedStatement statement = null;
 		try {
@@ -157,8 +156,8 @@ public class ConnectionUtil {
 		Connection connection = null;
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
-			connection = DriverManager.getConnection("jdbc:mysql://xx.xxx.xxx.xx:3306/autoclick?useUnicode=true&characterEncoding=utf-8&useSSL=false", "root", "xxxxxx");
-//			connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/autoclick", "root", "123456");
+//			connection = DriverManager.getConnection("jdbc:mysql://xx.xxx.xxx.xx:3306/autoclick?useUnicode=true&characterEncoding=utf-8&useSSL=false", "root", "xxxxxx");
+			connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/autoclick?useUnicode=true&characterEncoding=utf-8&useSSL=false", "root", "123456");
 		} catch (Exception e) {
 
 		}

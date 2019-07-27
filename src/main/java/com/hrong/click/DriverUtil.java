@@ -69,9 +69,12 @@ public class DriverUtil {
 				if (!e.getMessage().contains("alert")) {
 					try {
 						Thread.sleep(3000L);
-						if (AutoClick.errorCount > 1 || e.getMessage().contains("chrome not reachable") || e.getMessage().contains("no such window")) {
-							ConnectionUtil.log(null, 0, "检测到浏览器已关闭，即将退出程序");
-							System.exit(1);
+						//没有发生超时的情况
+						if (!AutoClick.hasError) {
+							if (e.getMessage().contains("chrome not reachable") || e.getMessage().contains("no such window")) {
+								ConnectionUtil.log(null, 0, "检测到浏览器已关闭，即将退出程序");
+								System.exit(1);
+							}
 						}
 					} catch (InterruptedException e1) {
 						ConnectionUtil.log(null, 0, "检测到浏览器已关闭，即将退出程序");

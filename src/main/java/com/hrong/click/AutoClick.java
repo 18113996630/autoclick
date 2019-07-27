@@ -15,6 +15,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -25,17 +28,19 @@ import java.util.logging.Logger;
  * @Author hrong
  **/
 public class AutoClick {
-	public static int errorCount = 0;
-	private static Logger logger = Logger.getLogger("AutoClick");
+	static int errorCount = 0;
 	private static String account = "";
 	private static String pwd = "";
 	private static List<String> times;
 	private static ThreadPoolExecutor executor = new ThreadPoolExecutor(1,
-			3,
+			1,
 			0L,
 			TimeUnit.SECONDS, new LinkedBlockingQueue<>(10), (ThreadFactory) Thread::new);
+	private static ExecutorService pool = Executors.newSingleThreadExecutor();
 	private static ChromeDriver driver;
 	private static DriverUtil instance = null;
+	static boolean hasError = false;
+	private static int retryCount = 1;
 
 	static {
 		account = PropertyUtil.get("account") == null ? account : PropertyUtil.get("account").trim();
@@ -47,7 +52,7 @@ public class AutoClick {
 
 	public static void main(String[] args) throws Exception {
 		try {
-			logger.info("账号"+account+"首次运行>>>>");
+			ConnectionUtil.log(null, 0, "账号"+account+"首次运行>>>>");
 			//检测浏览器是否关闭
 			executor.execute(() -> {
 				while (errorCount != 1) {
@@ -57,36 +62,38 @@ public class AutoClick {
 						e.printStackTrace();
 					}
 				}
-				logger.info("开始监听浏览器是否关闭");
+				ConnectionUtil.log(null, 0, "开始监听浏览器是否关闭");
 				instance.validChromeIsClosed();
 			});
 			runJob();
+			pool.execute(() -> {
+				while (true) {
+					while (hasError) {
+						driver.close();
+						ConnectionUtil.log(null, 0, "开始第"+retryCount+"次重试");
+						retryCount++;
+						runJob();
+					}
+				}
+			});
 		} catch (Exception e) {
 			driver.close();
-			logger.info("出现异常:"+e.getMessage()+",开始第一次重试");
-			try {
-				runJob();
-			} catch (Exception e1) {
-				driver.close();
-				logger.info("第一次重试后运行过程中出现异常:"+e1.getMessage()+",开始第二次重试");
-				try {
-					runJob();
-				} catch (Exception e2) {
-					logger.info("第二次重试后运行过程中出现异常:"+e1.getMessage()+",程序即将退出");
-					errorCount = 2;
-					driver.close();
-				}
-			}
+			ConnectionUtil.log(null, 0,"出现异常:"+e.getMessage()+",程序即将退出");
 		}
 	}
 
-	private static void runJob() throws Exception {
+	private static void runJob(){
+		hasError = false;
 		ChromeOptions options = new ChromeOptions();
 		//设置chrome及驱动地址
 		options.setBinary("D:\\chrome\\Application\\chrome.exe");
 		System.setProperty("webdriver.chrome.driver", "D:\\chrome\\Application\\chromedriver.exe");
 		driver = new ChromeDriver(options);
-		deatilJob(driver);
+		try {
+			deatilJob(driver);
+		} catch (Exception e) {
+			hasError = true;
+		}
 	}
 
 	private static void deatilJob(ChromeDriver driver) throws Exception {
@@ -110,8 +117,6 @@ public class AutoClick {
 		while (true) {
 			valid();
 			today = sdfDay.format(new Date());
-//				boolean isFirst = true;
-//				boolean isFinish = false;
 			while (true) {
 				//超过指定时间后启动，且未签到完成
 				if (similar("2350")) {
