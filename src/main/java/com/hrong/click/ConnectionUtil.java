@@ -158,8 +158,9 @@ public class ConnectionUtil {
 			Class.forName("com.mysql.jdbc.Driver");
 //			connection = DriverManager.getConnection("jdbc:mysql://xx.xxx.xxx.xx:3306/autoclick?useUnicode=true&characterEncoding=utf-8&useSSL=false", "root", "xxxxxx");
 			connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/autoclick?useUnicode=true&characterEncoding=utf-8&useSSL=false", "root", "123456");
+			System.out.println("获取到连接");
 		} catch (Exception e) {
-
+			return null;
 		}
 		return connection;
 	}
