@@ -35,9 +35,9 @@ public class DriverUtil {
 		return driver.findElement(new By.ByCssSelector(selector));
 	}
 
-	public boolean refresh() {
-		closeLayer();
+	public boolean refresh(){
 		try {
+			closeLayer();
 			//刷新按钮
 			WebElement refreshBtn = findById("oneKeyRefreshPirce");
 			refreshBtn.click();
@@ -50,11 +50,8 @@ public class DriverUtil {
 			exit.click();
 			ConnectionUtil.log(null, 1, "刷新成功");
 		} catch (Exception e) {
-			if (e.getMessage().contains("#layerbox-border")) {
-				ConnectionUtil.log(null, 1, e.getMessage().substring(0,50));
-				return false;
-			}
 			ConnectionUtil.log(null, 0, e.getMessage());
+			throw new RuntimeException("");
 		}
 		return false;
 	}

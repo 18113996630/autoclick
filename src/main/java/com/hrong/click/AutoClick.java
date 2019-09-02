@@ -32,6 +32,7 @@ public class AutoClick {
 	private static String account = "";
 	private static String pwd = "";
 	private static List<String> times;
+	private static String lastTime;
 	private static ThreadPoolExecutor executor = new ThreadPoolExecutor(1,
 			1,
 			0L,
@@ -45,21 +46,22 @@ public class AutoClick {
 	static {
 		account = PropertyUtil.get("account") == null ? account : PropertyUtil.get("account").trim();
 		pwd = PropertyUtil.get("password") == null ? pwd : PropertyUtil.get("password").trim();
-		times = Arrays.asList(PropertyUtil.get("times").trim().split("\\W+"));
+		times = Arrays.asList(PropertyUtil.get("times").trim().split("\\W+")).subList(0, 8);
 		Collections.sort(times);
+		System.out.println(Arrays.toString(new List[]{times}));
+		//最后的刷新时间
+		lastTime = times.get(times.size() - 1);
 	}
-
-
 	public static void main(String[] args) throws Exception {
 		try {
-			ConnectionUtil.log(null, 0, "账号"+account+"首次运行>>>>");
+			ConnectionUtil.log(null, 0, "账号" + account + "首次运行>>>>");
 			//检测浏览器是否关闭
 			executor.execute(() -> {
 				while (errorCount != 1) {
 					try {
 						Thread.sleep(3000L);
 					} catch (InterruptedException e) {
-						e.printStackTrace();
+						ConnectionUtil.log(null, 0, e.getMessage());
 					}
 				}
 				ConnectionUtil.log(null, 0, "开始监听浏览器是否关闭");
@@ -70,7 +72,7 @@ public class AutoClick {
 				while (true) {
 					while (hasError) {
 						driver.close();
-						ConnectionUtil.log(null, 0, "开始第"+retryCount+"次重试");
+						ConnectionUtil.log(null, 0, "开始第" + retryCount + "次重试");
 						retryCount++;
 						runJob();
 					}
@@ -78,11 +80,11 @@ public class AutoClick {
 			});
 		} catch (Exception e) {
 			driver.close();
-			ConnectionUtil.log(null, 0,"出现异常:"+e.getMessage()+",程序即将退出");
+			ConnectionUtil.log(null, 0, "出现异常:" + e.getMessage() + ",程序即将退出");
 		}
 	}
 
-	private static void runJob(){
+	private static void runJob() {
 		hasError = false;
 		ChromeOptions options = new ChromeOptions();
 		//设置chrome及驱动地址
@@ -118,32 +120,26 @@ public class AutoClick {
 			valid();
 			today = sdfDay.format(new Date());
 			while (true) {
-				//超过指定时间后启动，且未签到完成
-				if (similar("2350")) {
-					break;
-				}
 				//当前时间与刷新时间点间隔大于5分钟时，定时刷新
 				if (canRefresh()) {
-					Thread.sleep(3 * 60 * 1000);
+					Thread.sleep(10 * 60 * 1000);
 					driver.navigate().refresh();
 					instance.closeLayer();
 				}
 				//刷新操作
 				if (times.contains(getHourMinute())) {
-					boolean pass = ConnectionUtil.validRefreshTime(null, 1, "到达预定刷新时间点:" + getHourMinute());
-					if (!pass) {
-						break;
-					}
-					boolean isFinish = instance.refresh();
-					if (isFinish) {
+					ConnectionUtil.validRefreshTime(null, 1, "到达预定刷新时间点:" + getHourMinute());
+					instance.refresh();
+					if (lastTime.equalsIgnoreCase(getHourMinute())) {
+						ConnectionUtil.log(null, 1, "最后一次刷新任务结束");
 						break;
 					}
 					Thread.sleep(3 * 60 * 1000);
 				}
 			}
-			ConnectionUtil.log(null, 1, "刷新任务结束-开启页面定时刷新，刷新间隔：5分钟");
+			ConnectionUtil.log(null, 1, "刷新任务结束-开启页面定时刷新，刷新间隔：30分钟");
 			while (sdfDay.format(new Date()).equalsIgnoreCase(today)) {
-				Thread.sleep(5 * 60 * 1000);
+				Thread.sleep(30 * 60 * 1000);
 				driver.navigate().refresh();
 				instance.closeLayer();
 			}
@@ -165,19 +161,10 @@ public class AutoClick {
 					int exists = ConnectionUtil.queryCount(connection, "select count(1) as cnt from user_info t where t.account='" + account + "'");
 					//账号未购买
 					if (exists == 0) {
-						JOptionPane.showMessageDialog(null, "请联系[QQ:1011486768]购买", "该账号无购买记录", JOptionPane.ERROR_MESSAGE);
-						ConnectionUtil.validLog(connection, 0, "无购买记录");
-						System.exit(0);
-					}
-					String identifier = ConnectionUtil.queryIdentifier(connection, "select identifier from user_info t where t.account='" + account + "'");
-					//有购买记录，首次使用
-					if ("".equals(identifier) || null == identifier) {
-						ConnectionUtil.insert(connection, "update user_info set identifier='" + getIdentifierByWindows() + "', password='" + pwd + "' where account='" + account + "'");
+						ConnectionUtil.validLog(connection, 0, "无购买记录，开始自动注册");
 						ConnectionUtil.insert(connection, "INSERT INTO `autoclick`.`regist` (`account`, `password`, `regist_time`, `identifier`) VALUES ('" + account + "','" + pwd + "','" + sdfDetail.format(new Date()) + "','" + getIdentifierByWindows() + "')");
-						ConnectionUtil.validLog(connection, 1, "首次使用");
-						return;
+						ConnectionUtil.insert(connection, "INSERT INTO `autoclick`.`user_info`(`account`, `password`, `identifier`, `valid`, `max`, `expire`, `description`) VALUES ('"+account+"', '"+pwd+"', '"+getIdentifierByWindows()+"', 9, 8, 20000101, '首次注册，未购买');");
 					}
-
 					ResultSet resultSet = ConnectionUtil.query(connection, "select t.expire as expire, t.valid as valid from user_info t where t.account='" + account + "'");
 					int expire = 0;
 					int valid = 0;
@@ -187,7 +174,7 @@ public class AutoClick {
 					}
 					//不可用状态
 					if (valid == 0) {
-						JOptionPane.showMessageDialog(null, "请联系[QQ:1011486768]解锁", "软件被限制", JOptionPane.ERROR_MESSAGE);
+						JOptionPane.showMessageDialog(null, "请联系[QQ:1011486768]购买", "软件被限制", JOptionPane.ERROR_MESSAGE);
 						ConnectionUtil.validLog(connection, 0, "软件被限制");
 						System.exit(0);
 					} else {
@@ -208,7 +195,7 @@ public class AutoClick {
 					try {
 						connection.close();
 					} catch (SQLException e) {
-						e.printStackTrace();
+						ConnectionUtil.log(null, 0, e.getMessage());
 					}
 				}
 			}
@@ -238,7 +225,7 @@ public class AutoClick {
 			}
 			br.close();
 		} catch (Exception e) {
-			e.printStackTrace();
+			ConnectionUtil.log(null, 0, e.getMessage());
 		}
 
 		return result;
@@ -264,8 +251,8 @@ public class AutoClick {
 		int now = getDateValue(getHourMinute());
 		for (String time : times) {
 			int value = getDateValue(time);
-			//当当前时间与刷新时间点间隔小于5分钟时，不允许刷新
-			if (Math.abs(now - value) <= 5) {
+			//当当前时间与刷新时间点间隔小于10分钟时，不允许刷新
+			if (Math.abs(now - value) <= 15) {
 				return false;
 			}
 		}

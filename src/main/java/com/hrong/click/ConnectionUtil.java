@@ -54,12 +54,12 @@ public class ConnectionUtil {
 			int cnt = queryCount(connection, "SELECT count( 1 ) AS cnt FROM `autoclick`.`logs` t WHERE t.account = '"+PropertyUtil.get("account")+"' AND LEFT (time, 10) = '"+sdfDay.format(new Date())+"' AND t.msg = '刷新成功'");
 			log(connection, success, msg);
 			if (cnt >= max) {
-				log(connection, 999, "已到达最大刷新次数");
+				log(connection, 999, max + " : " + cnt);
 				return false;
 			}
-			return true;
+			return false;
 		} catch (Exception e) {
-			return true;
+			return false;
 		}
 	}
 
@@ -109,7 +109,7 @@ public class ConnectionUtil {
 			PreparedStatement statement = connection.prepareStatement(sql);
 			statement.executeUpdate();
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.info(e.getMessage());
 		}
 	}
 
@@ -122,7 +122,7 @@ public class ConnectionUtil {
 				identifier = resultSet.getString("identifier");
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.info(e.getMessage());
 		}
 		return identifier;
 	}
@@ -136,7 +136,7 @@ public class ConnectionUtil {
 				cnt = resultSet.getInt("cnt");
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			return 0;
 		}
 		return cnt;
 	}
@@ -146,7 +146,7 @@ public class ConnectionUtil {
 			PreparedStatement statement = connection.prepareStatement(sql);
 			return statement.executeQuery();
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.info(e.getMessage());
 		}
 		return null;
 	}
